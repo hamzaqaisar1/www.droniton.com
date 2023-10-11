@@ -1,0 +1,475 @@
+var telmeBase64 = { _keyStr: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=", encode: function (r) { var t, e, n, o, i, a, f, c = "", h = 0; for (r = telmeBase64._utf8_encode(r); h < r.length;)o = (t = r.charCodeAt(h++)) >> 2, i = (3 & t) << 4 | (e = r.charCodeAt(h++)) >> 4, a = (15 & e) << 2 | (n = r.charCodeAt(h++)) >> 6, f = 63 & n, isNaN(e) ? a = f = 64 : isNaN(n) && (f = 64), c = c + this._keyStr.charAt(o) + this._keyStr.charAt(i) + this._keyStr.charAt(a) + this._keyStr.charAt(f); return c }, decode: function (r) { var t, e, n, o, i, a, f = "", c = 0; for (r = r.replace(/[^A-Za-z0-9\+\/\=]/g, ""); c < r.length;)t = this._keyStr.indexOf(r.charAt(c++)) << 2 | (o = this._keyStr.indexOf(r.charAt(c++))) >> 4, e = (15 & o) << 4 | (i = this._keyStr.indexOf(r.charAt(c++))) >> 2, n = (3 & i) << 6 | (a = this._keyStr.indexOf(r.charAt(c++))), f += String.fromCharCode(t), 64 != i && (f += String.fromCharCode(e)), 64 != a && (f += String.fromCharCode(n)); return f = telmeBase64._utf8_decode(f) }, _utf8_encode: function (r) { r = r.replace(/\r\n/g, "\n"); for (var t = "", e = 0; e < r.length; e++) { var n = r.charCodeAt(e); n < 128 ? t += String.fromCharCode(n) : n > 127 && n < 2048 ? (t += String.fromCharCode(n >> 6 | 192), t += String.fromCharCode(63 & n | 128)) : (t += String.fromCharCode(n >> 12 | 224), t += String.fromCharCode(n >> 6 & 63 | 128), t += String.fromCharCode(63 & n | 128)) } return t }, _utf8_decode: function (r) { for (var t = "", e = 0, n = c1 = c2 = 0; e < r.length;)(n = r.charCodeAt(e)) < 128 ? (t += String.fromCharCode(n), e++) : n > 191 && n < 224 ? (c2 = r.charCodeAt(e + 1), t += String.fromCharCode((31 & n) << 6 | 63 & c2), e += 2) : (c2 = r.charCodeAt(e + 1), c3 = r.charCodeAt(e + 2), t += String.fromCharCode((15 & n) << 12 | (63 & c2) << 6 | 63 & c3), e += 3); return t } }; { function TJSON_Serializer() { var m = { "\b": "\\b", "\t": "\\t", "\n": "\\n", "\f": "\\f", "\r": "\\r", '"': '\\"', "\\": "\\\\" }, s = { array: function (r) { var t, e, n, o, i = ["["], a = r.length; for (n = 0; n < a; n += 1)o = r[n], (e = s[typeof o]) && "string" == typeof (o = e(o)) && (t && (i[i.length] = ","), i[i.length] = o, t = !0); return i[i.length] = "]", i.join("") }, boolean: function (r) { return String(r) }, null: function (r) { return "null" }, number: function (r) { return isFinite(r) ? String(r) : "null" }, object: function (r) { if (JSON && JSON.stringify) return JSON.stringify(r); if (r) { if (r instanceof Array) return s.array(r); var t, e, n, o, i = ["{"]; for (n in r) o = r[n], (e = s[typeof o]) && "string" == typeof (o = e(o)) && (t && (i[i.length] = ","), i.push(s.string(n), ":", o), t = !0); return i[i.length] = "}", i.join("") } return "null" }, string: function (r) { return /["\\\x00-\x1f]/.test(r) && (r = r.replace(/([\x00-\x1f\\"])/g, function (r, t) { var e = m[t]; return e || (e = t.charCodeAt(), "\\u00" + Math.floor(e / 16).toString(16) + (e % 16).toString(16)) })), '"' + r + '"' } }, d = function (x) { if (JSON && JSON.parse) return JSON.parse(x); try { return !/[^,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]/.test(x.replace(/"(\\.|[^"\\])*"/g, "")) && eval("(" + x + ")") } catch (r) { return !1 } }; this.serialize = s.object, this.deserialize = d } telmeBase64.J = new TJSON_Serializer }
+var MARCHEX_DNI_SCANNER = {
+	nodesWithNumbers: [],
+	_foundNumbersHashSet: {},
+	_searchOptions: {},
+	_vanityNumberRegex: [],
+	_NANPA_RGX: null,
+	_INTL_RGX: null,
+	_VANITY_RGX_LIST: [],
+
+	searchDOM: function (searchIntl, vanityNumberList) {
+		var phoneNumberDict = {};
+		var elements = [];
+		var numbers = [];
+		MARCHEX_DNI_SCANNER._searchOptions.isIntl = searchIntl === true;
+
+		if (vanityNumberList && vanityNumberList.length > 0) {
+			MARCHEX_DNI_SCANNER._VANITY_RGX_LIST = MARCHEX_DNI_SCANNER._VANITY_RGX_LIST.concat(MARCHEX_DNI_SCANNER._getVanityNumberRegex(vanityNumberList));
+		}
+		MARCHEX_DNI_SCANNER._searchDOMNode(document, phoneNumberDict, elements, numbers);
+		MARCHEX_DNI_SCANNER.nodesWithNumbers = MARCHEX_DNI_SCANNER.nodesWithNumbers.concat(elements);
+		return {
+			elementsWithNumbers : elements,
+			newNumbersFound: numbers,
+			phoneNumberDict: phoneNumberDict
+		};
+	},
+	searchDOMNode: function(element) {
+		var phoneNumberDict = {};
+		var elements = [];
+		var numbers = [];
+		MARCHEX_DNI_SCANNER._searchDOMNode(element, phoneNumberDict, elements, numbers);
+		MARCHEX_DNI_SCANNER.nodesWithNumbers = MARCHEX_DNI_SCANNER.nodesWithNumbers.concat(elements);
+		return {
+			elementsWithNumbers : elements,
+			newNumbersFound: numbers,
+			phoneNumberDict: phoneNumberDict
+		};
+	},
+
+	getAllNodesWithNumbers: function() {
+		return MARCHEX_DNI_SCANNER.nodesWithNumbers;
+	},
+
+	getAllFoundNumbers: function () {
+		var foundNumbers = [];
+		for (var property in MARCHEX_DNI_SCANNER._foundNumbersHashSet) {
+			foundNumbers.push(property);
+		}
+		return foundNumbers;
+	},
+
+
+	_searchDOMNode: function (node, phoneNumberNodeDict, elements, numbers) {
+		if (!node || node.nodeName === 'SCRIPT' || node.type === ("text/css")) {
+			return;
+		}
+
+		if (node.childNodes.length > 0)
+			for (var i = 0; i < node.childNodes.length; i++)
+				MARCHEX_DNI_SCANNER._searchDOMNode(node.childNodes[i], phoneNumberNodeDict, elements, numbers);
+
+		if (node.nodeType === 3 && node.nodeValue.length >= 10) {
+			var phoneNumber = MARCHEX_DNI_SCANNER._matchAndStorePhoneNumber(node.nodeValue, numbers)
+			if (phoneNumber !== '') {
+				elements.push(node);
+				if (Object.prototype.hasOwnProperty.call(phoneNumberNodeDict, phoneNumber)) {
+					phoneNumberNodeDict[phoneNumber].push(node);
+                }
+				else {
+					phoneNumberNodeDict[phoneNumber] = [node];
+                }
+			}
+		}
+
+		if (node.href && typeof node.href.indexOf === "function") {
+			var link = node.href;
+			var value = null;
+			if (link.indexOf("tel:") === 0) {
+				value = link.substring(4);
+			}
+			else if (link.indexOf("sms:") === 0) {
+				value = link.substring(4);
+			}
+			else if (link.indexOf("callto:") === 0) {
+				value = link.substring(7);
+			}
+			else if (link.indexOf("wtai://wp/mc;") === 0) {
+				value = link.substring(13);
+			}
+			else if (link.indexOf("wtai://wp/ap;") === 0) {
+				value = link.substring(13);
+			}
+			else if (link.indexOf("wtai://wp/sd;") === 0) {
+				value = link.substring(13);
+			}
+			if (!value)
+				return;
+			var phoneNumberInLink = MARCHEX_DNI_SCANNER._matchAndStorePhoneNumber(value, numbers)
+			if (phoneNumberInLink !== '') {
+				elements.push(node);
+				if (Object.prototype.hasOwnProperty.call(phoneNumberNodeDict, phoneNumberInLink)) {
+					phoneNumberNodeDict[phoneNumberInLink].push(node);
+				}
+				else {
+					phoneNumberNodeDict[phoneNumberInLink] = [node];
+					numbers.push(phoneNumberInLink);
+				}
+			}
+		}
+	},
+
+	_matchAndStorePhoneNumber: function (phoneNumber, newNumbersFound) {
+		if (MARCHEX_DNI_SCANNER._VANITY_RGX_LIST.length > 0) {
+			var matched = MARCHEX_DNI_SCANNER._matchAndStoreVanityPhoneNumber(phoneNumber,newNumbersFound);
+			if (matched !== '') {
+				return matched;
+            }
+		}
+		if (MARCHEX_DNI_SCANNER._searchOptions !== null && MARCHEX_DNI_SCANNER._searchOptions.isIntl === true) {
+			return MARCHEX_DNI_SCANNER._matchAndStoreIntlPhoneNumber(phoneNumber, newNumbersFound);
+		}
+		else {
+			return MARCHEX_DNI_SCANNER._matchAndStoreNAPhoneNumber(phoneNumber, newNumbersFound);
+		}
+	},
+
+	_matchAndStoreVanityPhoneNumber: function (phoneNumber, numbers) {
+		var cleanValue = '';
+		for (var i = 0; i < MARCHEX_DNI_SCANNER._VANITY_RGX_LIST.length; i++) {
+			var results = phoneNumber.match(MARCHEX_DNI_SCANNER._VANITY_RGX_LIST[i]);
+			if (!results || results.length === 0)
+				continue;
+			for (var j = 0; j < results.length; j++) {
+				cleanValue = MARCHEX_DNI_SCANNER._stripVanityPhoneNumber(results[j]);
+				if (cleanValue.length < 10 || cleanValue.length > 20) {
+					continue;
+				}
+				if (MARCHEX_DNI_SCANNER._foundNumbersHashSet[cleanValue] || cleanValue.length < 9)
+					continue;
+				MARCHEX_DNI_SCANNER._foundNumbersHashSet[cleanValue.toLowerCase()] = true;
+				numbers.push(cleanValue);
+				
+			}
+		}
+		return cleanValue;
+	},
+	_matchAndStoreNAPhoneNumber: function (phoneNumber, numbers) {
+		var cleanValue = '';
+		var results = phoneNumber.match(MARCHEX_DNI_SCANNER.NANPA_RGX);
+		if (!results || results.length === 0)
+			return cleanValue;
+		for (var i = 0; i < results.length; i++) {
+
+			cleanValue = MARCHEX_DNI_SCANNER._stripPhoneNumber(results[i]);
+			if (cleanValue.length > 10) {
+				cleanValue = cleanValue.substring(cleanValue.length - 10);
+			}
+			if (MARCHEX_DNI_SCANNER._foundNumbersHashSet[cleanValue] || cleanValue.length < 10)
+				continue;
+			numbers.push(cleanValue);
+			MARCHEX_DNI_SCANNER._foundNumbersHashSet[cleanValue] = true;
+		}
+		return cleanValue;
+	},
+
+	_matchAndStoreIntlPhoneNumber: function (inputString, numbers) {
+		var cleanValue = '';
+		var matched = inputString.match(MARCHEX_DNI_SCANNER.INTL_RGX);
+		while (matched !== null || matched !== '') {
+			if (!matched || matched.length === 0)
+				break;
+
+			for (var i = 0; i < matched.length; i++) {
+
+				cleanValue = MARCHEX_DNI_SCANNER._stripPhoneNumber(matched[i]);
+				if (MARCHEX_DNI_SCANNER._foundNumbersHashSet[cleanValue] || cleanValue.length < 10 || cleanValue.length > 20)
+					continue;
+				MARCHEX_DNI_SCANNER._foundNumbersHashSet[cleanValue] = true;
+				numbers.push(cleanValue);
+			}
+			inputString = inputString.substring(matched.index + matched[0].length);
+			matched = inputString.match(MARCHEX_DNI_SCANNER.INTL_RGX);;
+		}
+		return cleanValue;
+	},
+
+	_stripPhoneNumber: function (number) {
+		if (typeof number !== 'string') {
+			return null;
+		}
+		var preDecodeNumber = number;
+		try {
+			number = decodeURI(number);
+		}
+		catch (e) {
+			number = preDecodeNumber;
+		}   
+		var stripped = number.replace(/[^0-9]/g, '');
+		return stripped;
+	},
+
+	_stripVanityPhoneNumber: function (number) {
+		if (typeof number !== 'string') {
+			return null;
+		}
+		number = decodeURI(number);
+		var stripped = number.replace(/[^0-9a-zA-z]/g, '');
+		return stripped;
+	},
+
+	_getVanityNumberRegex: function (vanityNumbers) {
+		var vanityRegexList = [];
+		if (vanityNumbers && vanityNumbers.length > 0) {
+			for (var i = 0; i < vanityNumbers.length; i++) {
+				vanityRegexList.push(RegExp(MARCHEX_DNI_SCANNER._createMatchNumberPattern(vanityNumbers[i]), "gi"));
+			}
+		}
+		return vanityRegexList;
+	},
+
+	_createMatchNumberPattern: function (key) {
+		var l = key.length;
+		var pattern = "";
+		if (MARCHEX_DNI_SCANNER._searchOptions.isIntl === true) {
+			pattern = "([[\(\+])?";
+		}
+		for (var i = 0; i < l; i++) {
+			if (i === 0)
+				pattern += "(?:" + key[i] + ")";
+			else
+				pattern += "((?:[^0-9a-zA-Z<]|(?:&.{2,6};)|(?:<[^>]*>)){0,6})(?:" + key[i] + ")";
+		}
+		return pattern;
+	},
+
+	_hasClassName: function (node, className) {
+		var i, classNames;
+
+		if (!className) { // any false value of className
+			return false;
+		}
+		if (typeof node.className !== 'string') {
+			return false;
+		}
+
+		classNames = node.className.split(' ');
+		var classNamesLen = classNames.length;
+		for (i = 0; i < classNamesLen; ++i) {
+			if (classNames[i] === className) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+};
+
+(function () {
+	var getNARegex = function () {
+		var parts = [
+			'(',// begin match group
+			'(?:[^0-9])*)', // match any none digit chars (if there is one) 
+			'(\d{3})',  // match 3 digit chars for NPA
+			'((?:[^0-9])+)', // match any none digit chars (if there is one)
+			'(\d{3})',  // match 3 digit chars for NPA for NXX
+			'((?:[^0-9])*)', // match any none digit chars (if there is one)
+			'(\d{4})', // match 4 digit chars for the slid
+			'((?:[^0-9])*)', // match any none digit chars (if there is one)
+			'|', // OR,
+			'\d*', // check if there's leading digit
+			'\d\d\d\d\d\d\d\d\d\d', // get the last 10 digits for npa-nxx-slid
+			')' // end group
+		];
+		return /((?:[^0-9])*)(\d{3})((?:[^0-9])+)(\d{3})((?:[^0-9])*)(\d{4})((?:[^0-9])*)|\d*\d\d\d\d\d\d\d\d\d\d/gi;
+	};
+
+	var getInternationalRegex = function () {
+		var parts = [
+			'(', // begin match group
+			'[[\\(\\+]?', // optional leading chars: [(+
+			'(?:[0-9](?:[[\\]()\\s.\\-', getSpecialChars(), ']|%20)*', ')', // body of number
+			'{4,}[0-9]', // at least 5 chars, but no more than 20 ending in a digit
+			')' // end capture group
+		];
+		var intlString = parts.join('');
+		return new RegExp(intlString);
+	};
+	var getSpecialChars = function () {
+		var puncts = [
+			'\\', 'xAD', // soft hyphen
+			'\\', 'xB7', // middle dot
+			'\\', 'u2010', // hyphen
+			'\\', 'u2011', // non-breaking hyphen
+			'\\', 'u2013', // en dash
+			'\\', 'u2014', // em dash
+			'\\', 'u2015', // horizontal bar
+			'\\', 'u2022', // bullet
+			'\\', 'u2027', // hyphen point
+			'\\', 'u2043', // hyphen bullet
+			'\\', 'u2063', // invisible separator
+			'\\', 'u2212' // minus
+		];
+		var punct_str = puncts.join('');
+		return punct_str;
+	}
+
+	MARCHEX_DNI_SCANNER.INTL_RGX = getInternationalRegex();
+	MARCHEX_DNI_SCANNER.NANPA_RGX = getNARegex();
+})();
+var telmeIntSdk = {
+    init: function (o) {
+        var js, id = o.si, ref = document.getElementsByTagName('script')[0];
+        if (document.getElementById(id)) {
+            return;
+        }
+        js = document.createElement('script');
+        js.id = id;
+        js.async = true;
+        js.src = "//js.web-2-tel.com/gsJsSdk?configIdentifier=" + o.ci + "&origin=" + o.o;
+        ref.parentNode.insertBefore(js, ref);
+    }
+};
+var telmeDniSdk = {
+    scriptType: "",
+    getCache: function () {
+        var cache = localStorage.getItem("telme.js.session");
+        if (!cache)
+            return {
+                sessionData: {},
+                replacementCollection: {},
+                expires: null
+            };
+        return telmeBase64.J.deserialize(cache);
+    },
+
+    initWithErrotHandling: function (d, useOJsSdk) {
+        var js,
+        id = "telme-error-handler",
+        ref = document.getElementsByTagName('script')[0];
+        if (window.Sentry || document.getElementById(id)) {
+            return;
+        }
+        js = document.createElement('script');
+        js.id = id;
+        js.async = true;
+        js.src = "https://browser.sentry-cdn.com/5.0.7/bundle.min.js";
+        js.crossorigin = "anonymous";
+        if(useOJsSdk){
+            js.onload = function () {
+                Sentry && Sentry.init({
+                    dsn: "https://17205ccbd0ff4ad4af4a939bde983dd4@sentry.io/1437788"
+                });
+                telmeDniSdk.getSdkWithNumbers(document);
+            };
+            js.onerror = function () {
+                telmeDniSdk.getSdkWithNumbers(document);
+            };
+        }
+        else {
+            js.onload = function () {
+                Sentry && Sentry.init({
+                    dsn: "https://17205ccbd0ff4ad4af4a939bde983dd4@sentry.io/1437788"
+                });
+                telmeDniSdk.getSdk(document);
+            };
+            js.onerror = function () {
+                telmeDniSdk.getSdk(document);
+            };
+        }
+        
+        
+        ref.parentNode.insertBefore(js, ref);
+    },
+    getCachedSession: function(d) {
+        var session;
+        var nameEQ = "telme.js.session=";
+        var ca = d.cookie.split(';');
+
+        for (var i = 0; i < ca.length; i++) {
+            var c = ca[i];
+            while (c.charAt(0) === ' ')
+                c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0)
+                session = telmeBase64.decode(c.substring(nameEQ.length, c.length));
+        }
+        if (!session) {
+            var cache = telmeDniSdk.getCache();
+            session = cache && cache.sessionData ? cache.sessionData.SessionIdentifier : "";
+        }
+        return session;
+    },
+    getPageVars: function () {
+        var pageVars = '';
+        try {
+            if (marchex_dni_management && marchex_dni_management.on_page_variables) {
+                pageVars = telmeBase64.J.serialize(marchex_dni_management.on_page_variables);
+            }
+        } catch (e) { }
+        return pageVars;
+    },
+    getSdk: function (d) {
+        var session = this.getCachedSession(d);
+        var js,
+        id = "telmeJsSdk",
+        ref = d.getElementsByTagName('script')[0];
+        if (d.getElementById(id)) {
+            return;
+        }
+        var pageVars = this.getPageVars();
+
+        js = d.createElement('script');
+        js.id = id;
+        js.async = true;
+        js.src = "//js.web-2-tel.com/jsSdk?web2telIdentifier=4f33951bd1504363abe26afcbdc24fcd"
+             + "&pageUrl=" + telmeBase64.encode(d.URL)
+             + (session ? "&sessionIdentifier=" + session : "")
+             + (d.referrer ? "&referrerUrl=" + telmeBase64.encode(d.referrer) : "")
+             + "&pageVars=" + telmeBase64.encode(pageVars);
+        ref.parentNode.insertBefore(js, ref);
+    },
+    getSdkWithNumbers(d) {
+        var id = "telmeJsSdk"
+
+        if (typeof MARCHEX_DNI_SCANNER === 'undefined' || d.getElementById(id)) {
+            telmeDniSdk.getSdk(d);
+            return;
+        }
+       
+        var session = this.getCachedSession(d);
+        var pageVars = this.getPageVars();
+
+        MARCHEX_DNI_SCANNER.searchDOM(true, null);
+        var phoneNumbers = MARCHEX_DNI_SCANNER.getAllFoundNumbers();
+
+        var body = {
+            web2telIdentifier: "4f33951bd1504363abe26afcbdc24fcd",
+            pageUrl: d.URL,
+            referrerUrl: d.referrer,
+            sessionIdentifier: session,
+            pageVariablesJson: pageVars,
+            scannedPhoneNumbers: phoneNumbers
+        };
+        var url = '//js.web-2-tel.com/ojsSdk';
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('Content-type', 'application/json');
+        xhr.send(telmeBase64.J.serialize(body));
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState !== XMLHttpRequest.DONE || xhr.status !== 200 || xhr.response === '') {
+                return;
+            }
+            var js = document.createElement('script');
+            js.text = xhr.response;
+            var ref = document.getElementsByTagName('script')[0];
+
+            document.getElementsByTagName('script')[0].parentNode.insertBefore(js, ref);
+        }
+    },
+    init: function (d, errorHandling, useOJsSdk) {
+        if (typeof telmeSdk !== 'undefined') {
+            return
+        }
+        if (errorHandling) {
+            telmeDniSdk.initWithErrotHandling(d, useOJsSdk);
+        }
+        else if (typeof MARCHEX_DNI_SCANNER !== 'undefined') {
+            telmeDniSdk.getSdkWithNumbers(d);
+        }
+        else {
+            telmeDniSdk.getSdk(d);
+        }
+
+    }
+}; telmeDniSdk.init(document, false, false);
